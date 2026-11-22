@@ -4,6 +4,7 @@
 #include "Game.h"
 #include "Input.h"
 #include "Menu.h"
+#include "Scene.h"
 #include "Screen.h"
 
 int main() {
@@ -11,52 +12,46 @@ int main() {
     if (!screen.ok()) return 1;
 
     Input input(screen);          // starts the key input thread
-    Menu menu;
-    std::unique_ptr<Game> game;   // empty = menu screen, set = game screen
+    Menu menu;                    // the menu scene (always exists)
+    std::unique_ptr<Game> game;   // the game scene (empty while the menu is shown)
 
-    // Throw away queued keys when switching screens
+    // Throw away queued keys when switching scenes
     auto drainInput = [&]() {
         while (input.pop() != Key::None) {}
         };
 
     bool running = true;
     while (running) {
-        if (!game) {
-            // ---- menu screen ----
-            for (Key k = input.pop(); k != Key::None; k = input.pop()) {
-                MenuResult r = menu.handle(k);
-                if (r == MenuResult::Quit) {
-                    running = false;
-                    break;
-                }
-                if (r == MenuResult::Start) {
-                    game = std::make_unique<Game>(menu.rules());
-                    drainInput();
-                    break;
-                }
-            }
-            if (!game && running) {
-                menu.draw(screen);
-                screen.present();
-            }
+        // Polymorphism: scene points to either the menu or the game.
+        // The same calls below run the menu's or the game's own version.
+        Scene* scene = game ? static_cast<Scene*>(game.get())
+            : static_cast<Scene*>(&menu);
+
+        for (Key k = input.pop(); k != Key::None; k = input.pop()) {
+            scene->handle(k);
+            if (scene->exitRequest() != SceneExit::None) break;
         }
-        else {
-            // ---- game screen ----
-            for (Key k = input.pop(); k != Key::None; k = input.pop()) {
-                game->handle(k);
-            }
 
-            game->update(Game::Clock::now());
-            game->draw(screen);
-            screen.present();
+        scene->update(std::chrono::steady_clock::now());
+        scene->draw(screen);
+        screen.present();
 
-            if (game->quit()) {
-                running = false;
-            }
-            else if (game->wantsMenu()) {
-                game.reset();
-                drainInput();
-            }
+        // What does the scene want next?
+        switch (scene->exitRequest()) {
+        case SceneExit::ToGame:
+            game = std::make_unique<Game>(menu.rules());
+            menu.clearRequest();
+            drainInput();
+            break;
+        case SceneExit::ToMenu:
+            game.reset();
+            drainInput();
+            break;
+        case SceneExit::Quit:
+            running = false;
+            break;
+        case SceneExit::None:
+            break;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(16));   // about 60 fps

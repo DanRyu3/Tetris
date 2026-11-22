@@ -48,7 +48,27 @@ Rules Menu::rules() const {
     return r;
 }
 
-MenuResult Menu::handle(Key k) {
+// Scene::handle - remember if the user asked to start or quit
+void Menu::handle(Key k) {
+    MenuResult r = process(k);
+    if (r != MenuResult::None) result_ = r;
+}
+
+// Scene::exitRequest - tells main() what the menu wants
+SceneExit Menu::exitRequest() const {
+    switch (result_) {
+    case MenuResult::Start: return SceneExit::ToGame;
+    case MenuResult::Quit:  return SceneExit::Quit;
+    case MenuResult::None:  break;
+    }
+    return SceneExit::None;
+}
+
+void Menu::clearRequest() {
+    result_ = MenuResult::None;
+}
+
+MenuResult Menu::process(Key k) {
     switch (k) {
     case Key::Up:
         cursor_ = (cursor_ + rowCount() - 1) % rowCount();
@@ -228,7 +248,6 @@ void Menu::draw(Screen& s) const {
             fadeMillis(fade_) / 1000.0);
         s.text(d++, 4, line, 0x999999);
         s.text(d++, 4, "- Remember where they are!", 0x999999);
-        s.text(d++, 4, "- The ghost piece is hidden too.", 0x999999);
         s.text(d++, 4, "- The board is shown on game over.", 0x999999);
     }
 

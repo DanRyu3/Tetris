@@ -7,35 +7,38 @@
 static const bool CRACKED_ROW_WAITS_FOR_CLEAR = true;
 
 bool Board::collides(const Piece& p) const {
+    const Point origin{ p.x, p.y };
+
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
             if (!p.cells[i][j]) continue;
 
-            int r = p.y + i;
-            int c = p.x + j;
+            Point at = origin + Point{ j, i };                       // uses the overloaded operator+
 
-            if (c < 0 || c >= BW) return true;                    // side walls
-            if (r >= BH) return true;                             // floor
-            if (r >= 0 && grid_[r][c].color != 0) return true;    // placed cells
+            if (at.x < 0 || at.x >= BW) return true;               // side walls
+            if (at.y >= BH) return true;                           // floor
+            if (at.y >= 0 && grid_[at.y][at.x].color != 0) return true;   // placed cells
         }
     }
     return false;
 }
 
 void Board::lock(const Piece& p, std::chrono::steady_clock::time_point now) {
+    const Point origin{ p.x, p.y };
+
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < N; ++j) {
             int v = p.cells[i][j];
             if (!v) continue;
 
-            int r = p.y + i;
-            int c = p.x + j;
-            if (r < 0 || r >= BH || c < 0 || c >= BW) continue;
+            Point at = origin + Point{ j, i };                       // uses the overloaded operator+
+            if (at.y < 0 || at.y >= BH || at.x < 0 || at.x >= BW) continue;
 
-            grid_[r][c].color = static_cast<int>(p.type) + 1;
-            grid_[r][c].bomb = (v == 2);
-            grid_[r][c].armor = (v == 3) ? 2 : 0;
-            grid_[r][c].lockedAt = now;
+            Cell& cell = grid_[at.y][at.x];
+            cell.color = static_cast<int>(p.type) + 1;
+            cell.bomb = (v == 2);
+            cell.armor = (v == 3) ? 2 : 0;
+            cell.lockedAt = now;
         }
     }
 }

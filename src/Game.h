@@ -5,6 +5,7 @@
 #include <vector>
 #include "Board.h"
 #include "Piece.h"
+#include "Scene.h"
 #include "Screen.h"
 
 enum class GameMode { Standard, Bomb, Invisible };
@@ -34,18 +35,25 @@ std::string modeName(const Rules& r);
 // Invisible mode: how long (ms) a placed block stays visible
 int fadeMillis(FadeLevel level);
 
-class Game {
+// The game screen. It is one kind of Scene (inheritance).
+class Game : public Scene {
 public:
     using Clock = std::chrono::steady_clock;
 
     explicit Game(Rules rules);
 
-    void handle(Key k);
-    void update(Clock::time_point now);
-    void draw(Screen& s) const;
+    // Scene interface (overridden virtual functions)
+    void handle(Key k) override;
+    void update(Clock::time_point now) override;
+    void draw(Screen& s) const override;
+    SceneExit exitRequest() const override {
+        if (quit_) return SceneExit::Quit;           // quit the program
+        if (wantsMenu_) return SceneExit::ToMenu;    // go back to the menu
+        return SceneExit::None;
+    }
 
-    bool quit() const { return quit_; }               // quit the program
-    bool wantsMenu() const { return wantsMenu_; }     // go back to the menu
+    bool quit() const { return quit_; }
+    bool wantsMenu() const { return wantsMenu_; }
 
 private:
     // state saved every time a piece appears (used by undo)

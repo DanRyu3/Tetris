@@ -23,6 +23,6 @@ FetchContent_MakeAvailable(rsact)
 # --- 내 게임: src 폴더의 .cpp를 자동으로 전부 포함 ---
 file(GLOB TETRIS_SOURCES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/src/*.cpp)
 
-add_executable(tetris ${TETRIS_SOURCES} "src/Menu.h" "src/Menu.cpp")
+add_executable(tetris ${TETRIS_SOURCES} "src/Menu.h" "src/Menu.cpp" "src/Scene.h")
 target_include_directories(tetris PRIVATE src)
 target_link_libraries(tetris PRIVATE rsact::rsact_ffi)
